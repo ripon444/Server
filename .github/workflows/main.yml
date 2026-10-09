@@ -1,7 +1,6 @@
-yaml
 name: Windows Runner
 
-on:
+'on':
   workflow_dispatch:
 
 jobs:
