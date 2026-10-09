@@ -1,44 +1,25 @@
-name: Windows Runner Check
+name: CI
 
-'on':
-  workflow_dispatch:
-
-permissions:
-  contents: read
+on: [push, workflow_dispatch]
 
 jobs:
-  windows:
+  build:
+
     runs-on: windows-latest
 
     steps:
-      - name: Check Windows Version
-        shell: pwsh
-        run: |
-          Get-ComputerInfo |
-            Select-Object WindowsProductName, WindowsVersion, OsBuildNumber
-
-      - name: Save Desktop Screenshot
-        shell: pwsh
-        run: |
-          Add-Type -AssemblyName System.Drawing
-          $image = New-Object System.Drawing.Bitmap 800, 450
-          $graphics = [System.Drawing.Graphics]::FromImage($image)
-          $graphics.Clear([System.Drawing.Color]::White)
-          $font = New-Object System.Drawing.Font("Arial", 22)
-          $graphics.DrawString(
-            "GitHub Windows Runner",
-            $font,
-            [System.Drawing.Brushes]::Black,
-            30,
-            40
-          )
-          $graphics.Dispose()
-          $image.Save("$env:RUNNER_TEMP\runner.png")
-          $image.Dispose()
-
-      - name: Upload Screenshot
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-runner-screenshot
-          path: ${{ runner.temp }}\runner.png
-          retention-days: 1
+    - name: Download
+      run: Invoke-WebRequest https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip -OutFile ngrok.zip
+    - name: Extract
+      run: Expand-Archive ngrok.zip
+    - name: Auth
+      run: .\ngrok\ngrok.exe authtoken $Env:NGROK_AUTH_TOKEN
+      env:
+        NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
+    - name: Enable TS
+      run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server'-name "fDenyTSConnections" -Value 0
+    - run: Enable-NetFirewallRule -DisplayGroup "Remote Desktop"
+    - run: Set-ItemProperty -Path 'HKLM:\System\CurrentControlSet\Control\Terminal Server\WinStations\RDP-Tcp' -name "UserAuthentication" -Value 1
+    - run: Set-LocalUser -Name "runneradmin" -Password (ConvertTo-SecureString -AsPlainText "P@ssw0rd!" -Force)
+    - name: Create Tunnel
+      run: .\ngrok\ngrok.exe tcp 3389
