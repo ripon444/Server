@@ -1,7 +1,10 @@
-name: Windows Runner
+name: Windows Runner Check
 
 'on':
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
   windows:
@@ -14,9 +17,28 @@ jobs:
           Get-ComputerInfo |
             Select-Object WindowsProductName, WindowsVersion, OsBuildNumber
 
-      - name: Check User
+      - name: Save Desktop Screenshot
         shell: pwsh
         run: |
-          whoami
-          hostname
-          Get-Date
+          Add-Type -AssemblyName System.Drawing
+          $image = New-Object System.Drawing.Bitmap 800, 450
+          $graphics = [System.Drawing.Graphics]::FromImage($image)
+          $graphics.Clear([System.Drawing.Color]::White)
+          $font = New-Object System.Drawing.Font("Arial", 22)
+          $graphics.DrawString(
+            "GitHub Windows Runner",
+            $font,
+            [System.Drawing.Brushes]::Black,
+            30,
+            40
+          )
+          $graphics.Dispose()
+          $image.Save("$env:RUNNER_TEMP\runner.png")
+          $image.Dispose()
+
+      - name: Upload Screenshot
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-runner-screenshot
+          path: ${{ runner.temp }}\runner.png
+          retention-days: 1
