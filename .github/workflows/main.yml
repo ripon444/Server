@@ -1,41 +1,23 @@
-
-name: Validate ngrok Setup
+yaml
+name: Windows Runner
 
 on:
   workflow_dispatch:
 
-permissions:
-  contents: read
-
 jobs:
-  validate:
+  windows:
     runs-on: windows-latest
 
     steps:
-      - name: Download ngrok
+      - name: Check Windows Version
         shell: pwsh
         run: |
-          Invoke-WebRequest `
-            -Uri "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-windows-amd64.zip" `
-            -OutFile "$env:RUNNER_TEMP\ngrok.zip"
-          Expand-Archive `
-            -Path "$env:RUNNER_TEMP\ngrok.zip" `
-            -DestinationPath "$env:RUNNER_TEMP\ngrok" `
-            -Force
+          Get-ComputerInfo |
+            Select-Object WindowsProductName, WindowsVersion, OsBuildNumber
 
-      - name: Validate authentication
+      - name: Check User
         shell: pwsh
-        env:
-          NGROK_AUTH_TOKEN: ${{ secrets.NGROK_AUTH_TOKEN }}
         run: |
-          if ([string]::IsNullOrWhiteSpace($env:NGROK_AUTH_TOKEN)) {
-            throw "NGROK_AUTH_TOKEN secret is missing"
-          }
-
-          & "$env:RUNNER_TEMP\ngrok\ngrok.exe" config add-authtoken $env:NGROK_AUTH_TOKEN
-
-          if ($LASTEXITCODE -ne 0) {
-            throw "ngrok authentication setup failed"
-          }
-
-          Write-Output "ngrok authentication setup completed"
+          whoami
+          hostname
+          Get-Date
